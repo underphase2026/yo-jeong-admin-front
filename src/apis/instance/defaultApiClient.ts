@@ -1,7 +1,3 @@
-/**
- * defaultApiClient instance
- * API를 요청할 때 token을 통해 인증을 필요로하는 axios 인스턴스
- */
 import axios from "axios";
 import { keysToCamel, keysToSnake } from "../../utils/caseConverter";
 
@@ -13,22 +9,37 @@ const defaultApiClient = axios.create({
 
 defaultApiClient.interceptors.request.use(
   (config) => {
+    const token = localStorage.getItem("accessToken");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     if (config.data) {
       config.data = keysToSnake(config.data);
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 defaultApiClient.interceptors.response.use(
   (response) => {
-    response.data = keysToCamel(response.data);
+    // 데이터가 있을 때만 CamelCase 변환
+    if (response.data) {
+      try {
+        response.data = keysToCamel(response.data);
+      } catch (e) {
+        console.warn(
+          "CamelCase 변환 중 오류가 발생했으나 데이터를 그대로 반환합니다."
+        );
+      }
+    }
     return response;
   },
   async (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("accessToken");
+      window.location.href = "/login";
+    }
     return Promise.reject(error);
   }
 );

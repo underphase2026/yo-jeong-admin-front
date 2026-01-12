@@ -64,10 +64,16 @@ const QuoteDetail = ({ selectedQuoteCode }: QuoteDetailProps) => {
                     {detailData.email}
                   </span>
                 </div>
+                <div className="flex gap-2">
+                  <span className="text-base font-medium">견적코드</span>
+                  <span className="px-2 py-1 border border-gray-light rounded-md flex-1 truncate">
+                    {detailData.quoteCode}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="flex-1 flex flex-col gap-4">
-              <h3 className="text-lg font-semibold">고객정보</h3>
+              <h3 className="text-lg font-semibold"></h3>
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
                   <span className="text-base font-medium">기종</span>

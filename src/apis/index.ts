@@ -88,3 +88,112 @@ export const getSubsidy = async (telecom: string) => {
     throw error;
   }
 };
+
+interface AgencyLoginRequest {
+  userId: string;
+  password: string;
+}
+
+export const agencyLoginApi = async (data: AgencyLoginRequest) => {
+  try {
+    const res = await defaultApiClient.post("/agency/agencyLogin", data);
+    return res.data;
+  } catch (error) {
+    console.error("Error in agencyLoginApi:", error);
+    throw error;
+  }
+};
+
+interface AgencyRegisterRequest {
+  userId: number;
+  password: string;
+  name: string;
+  sellerName: string;
+  address: string;
+  phoneNumber: string;
+  email: string;
+  startTime: string;
+  endTime: string;
+}
+
+export const agencyRegisterApi = async (data: AgencyRegisterRequest) => {
+  try {
+    const res = await defaultApiClient.post("/agency/register", data);
+    return res.data;
+  } catch (error) {
+    console.error("Error in agencyRegisterApi:", error);
+    throw error;
+  }
+};
+
+interface enrollAgencyRequest {
+  telecom: string;
+  subsidyValue: number;
+}
+
+export const enrollAgencyApi = async (data: enrollAgencyRequest) => {
+  try {
+    const res = await defaultApiClient.post("/agency/enrollAgency", data);
+    return res.data;
+  } catch (error) {
+    console.error("Error in enrollAgencyApi:", error);
+    throw error;
+  }
+};
+
+interface getStatusAgencyRequest {}
+
+export interface getStatusAgencyResponse {
+  quoteCount: number;
+  completeQuoteCount: number;
+}
+
+export const getStatusAgencyApi = async () => {
+  try {
+    const res = await defaultApiClient.get<getStatusAgencyResponse>(
+      "/agency/getStatusAgency"
+    );
+    return res.data;
+  } catch (error) {
+    console.error("Error in getStatusAgencyApi:", error);
+    throw error;
+  }
+};
+
+interface getStatusQuoteRequest {
+  authCode: string;
+}
+
+export interface getStatusQuoteResponse {
+  userName: string;
+  agencyPhoneNumber: string;
+  isUserVisit: boolean;
+}
+
+export const getStatusQuoteApi = async (data: getStatusQuoteRequest) => {
+  try {
+    const res = await defaultApiClient.get<getStatusQuoteResponse>(
+      `/agency/getStatusQuote?authCode=${data.authCode}`
+    );
+    return res.data;
+  } catch (error) {
+    console.error("Error in getStatusQuoteApi:", error);
+    throw error;
+  }
+};
+
+interface getQuoteDetailRequest {
+  quoteCode: string;
+}
+
+export const getQuoteDetailApi = async (data: getQuoteDetailRequest) => {
+  try {
+    const res = await defaultApiClient.get(
+      `/agency/getQuoteDetail?quoteCode=${data.quoteCode}`
+    );
+    return res.data;
+  } catch (error) {
+    console.error("Error in getQuoteDetailApi:", error);
+    throw error;
+  }
+};
