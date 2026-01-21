@@ -2,6 +2,7 @@ import { atom } from "jotai";
 
 interface EditPriceModalState {
   isOpen: boolean;
+  phoneBrand: string; // 추가됨
   telecom: string;
   device: string;
   originalPrice: number;
@@ -13,8 +14,9 @@ interface EditPriceModalState {
   } | null;
 }
 
-const editPriceModalAtom = atom<EditPriceModalState>({
+export const editPriceModalAtom = atom<EditPriceModalState>({
   isOpen: false,
+  phoneBrand: "",
   telecom: "",
   device: "",
   originalPrice: 0,
@@ -22,19 +24,20 @@ const editPriceModalAtom = atom<EditPriceModalState>({
   option: null,
 });
 
-const EditPriceModalOpenAtom = atom(
-  (get) => get(editPriceModalAtom).isOpen,
+export const EditPriceModalOpenAtom = atom(
+  null,
   (_, set, payload: Omit<EditPriceModalState, "isOpen">) => {
     set(editPriceModalAtom, {
       isOpen: true,
       ...payload,
     });
-  }
+  },
 );
 
-const EditPriceModalCloseAtom = atom(null, (_, set) => {
+export const EditPriceModalCloseAtom = atom(null, (_, set) => {
   set(editPriceModalAtom, {
     isOpen: false,
+    phoneBrand: "",
     telecom: "",
     device: "",
     originalPrice: 0,
@@ -42,5 +45,3 @@ const EditPriceModalCloseAtom = atom(null, (_, set) => {
     option: null,
   });
 });
-
-export { editPriceModalAtom, EditPriceModalOpenAtom, EditPriceModalCloseAtom };

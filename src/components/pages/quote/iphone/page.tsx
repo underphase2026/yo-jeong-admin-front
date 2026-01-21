@@ -1,58 +1,41 @@
-import { useEffect, useState } from "react";
 import { deviceData } from "../../../../contents/deviceData";
 import Select from "../../../common/select";
 import Header from "../../../layout/header";
 import PageWrapper from "../../../layout/pageWrapper";
-import { getSubsidy } from "../../../../apis";
+import { useQuotePage } from "../hooks/useQuotePage";
 import PriceSettingField from "../priceSettingField";
+import EditPriceModal from "../editPriceModal";
+
+/**
+ * 아이폰 기기 데이터 구조 정의
+ * 갤럭시와 달리 출고가 속성명이 'price'인 점을 반영합니다.
+ */
+interface IPhoneDeviceItem {
+  phoneName: string;
+  phoneBrand: string;
+  price: number;
+}
 
 const IPhoneQuotePage = () => {
-  const [selectedOption, setSelectedOption] = useState<{ name: string } | null>(
-    null
-  );
-  const data = deviceData.apple;
-  const [commonDiscounts, setCommonDiscounts] = useState<{
-    SKT: number;
-    KT: number;
-    "LG U+": number;
-  }>({
-    SKT: 0,
-    KT: 0,
-    "LG U+": 0,
-  });
+  // 1. 커스텀 훅을 통해 로직 주입 (브랜드: apple)
+  const {
+    selectedOption,
+    setSelectedOption,
+    commonDiscounts,
+    agencyPriceList,
+  } = useQuotePage("apple");
 
-  // const [agencyPriceList, setAgencyPriceList] = useState();
+  // 2. 애플 기기 목록 데이터 가져오기 (타입 단언)
+  const data = deviceData.apple as IPhoneDeviceItem[];
 
-  const fetchPriceData = async () => {
-    // API를 통해 해당 판매점의 가격 데이터를 불러오고 반영함.
-  };
-
-  useEffect(() => {
-    const fetchCommonDiscount = async () => {
-      let amounts = commonDiscounts;
-      try {
-        await Promise.all(
-          ["SKT", "KT", "LG U+"].map(async (telecom) => {
-            const amount = await getSubsidy(telecom);
-            amounts[telecom as keyof typeof commonDiscounts] = amount;
-          })
-        );
-        console.log("Fetched common discounts:", amounts);
-        setCommonDiscounts(amounts);
-      } catch (error) {
-        console.error("Failed to fetch common discount:", error);
-      }
-    };
-
-    fetchCommonDiscount();
-
-    fetchPriceData();
-  }, []);
+  // 3. 현재 선택된 기기의 상세 정보 찾기
+  const currentDevice = data.find((d) => d.phoneName === selectedOption?.name);
 
   return (
     <>
       <Header />
       <PageWrapper className="flex flex-col gap-4">
+        {/* 기종 선택 셀렉트 박스 */}
         <Select.Group
           selectedOption={selectedOption}
           onChange={setSelectedOption}
@@ -61,44 +44,38 @@ const IPhoneQuotePage = () => {
             <Select.Option key={device.phoneName} name={device.phoneName} />
           ))}
         </Select.Group>
+
+        {/* 기기가 선택되었을 때만 통신사별 시세 필드 노출 */}
         {selectedOption && (
-          <>
-            <PriceSettingField
-              device={selectedOption.name}
-              telecom="SKT"
-              originalPrice={1234567}
-              commonDiscount={commonDiscounts["SKT"]}
-              options={[
-                { plan: "", type: "기기변경", price: 0 },
-                { plan: "", type: "번호이동", price: 0 },
-                { plan: "", type: "신규가입", price: 0 },
-              ]}
-            />
-            <PriceSettingField
-              device={selectedOption.name}
-              telecom="KT"
-              originalPrice={1234567}
-              commonDiscount={commonDiscounts["KT"]}
-              options={[
-                { plan: "", type: "기기변경", price: 0 },
-                { plan: "", type: "번호이동", price: 0 },
-                { plan: "", type: "신규가입", price: 0 },
-              ]}
-            />
-            <PriceSettingField
-              device={selectedOption.name}
-              telecom="LG U+"
-              originalPrice={1234567}
-              commonDiscount={commonDiscounts["LG U+"]}
-              options={[
-                { plan: "", type: "기기변경", price: 0 },
-                { plan: "", type: "번호이동", price: 0 },
-                { plan: "", type: "신규가입", price: 0 },
-              ]}
-            />
-          </>
+          <div className="flex flex-col gap-4">
+            {(["SKT", "KT", "LG U+"] as const).map((telecom) => {
+              // 서버에서 가져온 시세 데이터 중 해당 통신사 데이터 매핑
+              // (useQuotePage 훅에서 이미 'LG U'를 'LG U+'로 보정 완료)
+              const savedData = agencyPriceList.find(
+                (a) => a.telecom === telecom,
+              );
+
+              return (
+                <PriceSettingField
+                  key={telecom}
+                  phoneBrand="apple"
+                  device={selectedOption.name}
+                  telecom={telecom}
+                  // 아이폰 데이터의 'price'를 컴포넌트의 'originalPrice' 속성으로 전달합니다.
+                  originalPrice={currentDevice?.price || 0}
+                  // getSubsidy API로 조회된 공시 지원금
+                  commonDiscount={commonDiscounts[telecom] || 0}
+                  // 등록된 정보가 없으면 빈 배열 전달
+                  options={savedData?.options || []}
+                />
+              );
+            })}
+          </div>
         )}
       </PageWrapper>
+
+      {/* 편집 모달 - Jotai 상태에 따라 열림/닫힘 및 데이터 연동 */}
+      <EditPriceModal />
     </>
   );
 };
