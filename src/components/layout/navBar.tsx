@@ -4,8 +4,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 const navigationLinks = [
   { name: "메인페이지", href: "/main" },
-  { name: "아이폰 견적서 등록", href: "/quote/iphone" },
-  { name: "갤럭시 견적서 등록", href: "/quote/galaxy" },
+  { name: "아이폰 가격표 등록", href: "/quote/iphone" },
+  { name: "갤럭시 가격표 등록", href: "/quote/galaxy" },
 ];
 
 interface NavBarProps {
@@ -44,7 +44,7 @@ const NavBar = ({ isOpen, close }: NavBarProps) => {
             </button>
           </div>
           <div className="border-y border-gray-light rounded-full" />
-          <ul className="flex flex-col gap-6 text-[26px] text-gray-dark">
+          <ul className="flex flex-col gap-6 text-[22px] font-medium text-gray-dark">
             {navigationLinks.map((link) => (
               <li
                 key={link.name}
