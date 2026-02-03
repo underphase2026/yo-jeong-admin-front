@@ -7,11 +7,13 @@ import { getUserListApi, UserItem } from "../../../apis";
 interface QuoteListProps {
   selectedQuoteCode: string;
   setSelectedQuoteCode: React.Dispatch<React.SetStateAction<string>>;
+  setSelectedCreateTime: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const QuoteList = ({
   selectedQuoteCode,
   setSelectedQuoteCode,
+  setSelectedCreateTime,
 }: QuoteListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,6 +32,7 @@ const QuoteList = ({
         // 첫 번째 사용자를 자동 선택
         if (response.users.length > 0) {
           setSelectedQuoteCode(response.users[0].authCode);
+          setSelectedCreateTime(response.users[0].createTime);
         }
       } catch (error) {
         console.error("사용자 목록 조회 실패:", error);
@@ -40,7 +43,7 @@ const QuoteList = ({
     };
 
     fetchUserList();
-  }, [setSelectedQuoteCode]);
+  }, [setSelectedQuoteCode, setSelectedCreateTime]);
 
   // 1. 검색 필터링 로직
   const filteredUsers = users.filter(
@@ -89,6 +92,14 @@ const QuoteList = ({
         <input
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && searchTerm.trim()) {
+              // 엔터 시 검색어를 견적 코드로 간주하고 직접 조회
+              setSelectedQuoteCode(searchTerm.trim());
+              // createTime은 리스트에 없을 수 있으므로 빈 문자열 전달
+              setSelectedCreateTime('');
+            }
+          }}
           placeholder="견적 코드를 입력해주세요."
           className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-2xl outline-none focus:border-blue-primary placeholder:text-gray-300 text-sm transition-all"
         />
@@ -100,7 +111,10 @@ const QuoteList = ({
           currentItems.map((user) => (
             <div
               key={user.estimateId}
-              onClick={() => setSelectedQuoteCode(user.authCode)}
+              onClick={() => {
+                setSelectedQuoteCode(user.authCode);
+                setSelectedCreateTime(user.createTime);
+              }}
               className={cn(
                 "flex flex-row justify-between items-center px-5 py-4 border rounded-2xl cursor-pointer transition-all",
                 selectedQuoteCode === user.authCode
@@ -110,10 +124,7 @@ const QuoteList = ({
             >
               <div className="flex flex-col gap-1">
                 <p className="text-base font-semibold text-gray-700">
-                  {user.customerName}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {user.phoneBrand} {user.phoneName}
+                  {user.customerName} ({user.authCode})
                 </p>
                 <p className="text-xs text-gray-400">
                   {user.elapsedTime}
@@ -126,16 +137,21 @@ const QuoteList = ({
                   "px-3 py-1.5 rounded-lg text-xs font-bold w-20 text-center",
                   user.isUserVisit
                     ? "bg-[#EBF2FF] text-blue-primary"
-                    : "bg-[#F5F6F7] text-[#9EA4AA]"
+                    : "bg-[#EBF2FF] text-blue-primary"
                 )}
               >
-                {user.isUserVisit ? "완료" : "방문 예정"}
+                {user.isUserVisit ? "방문" : "방문 예정"}
               </div>
             </div>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
-            데이터가 존재하지 않습니다.
+          <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm gap-2">
+            <p>검색 결과가 없습니다.</p>
+            {searchTerm && (
+              <p className="text-xs text-gray-300">
+                ※ 엔터를 누르면 해당 코드로 직접 조회합니다.
+              </p>
+            )}
           </div>
         )}
       </div>

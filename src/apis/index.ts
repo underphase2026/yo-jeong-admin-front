@@ -197,7 +197,7 @@ interface getQuoteDetailRequest {
 }
 
 export interface getQuoteDetailResponse {
-  isPhoneActive: boolean;
+  isPhoneActivate: boolean;
   customerName: string;
   customerEmail: string;
   phoneBrand: string;
@@ -208,11 +208,13 @@ export interface getQuoteDetailResponse {
   subsidyByTelecom: number;
   subsidyByAgency: number;
   price: number;
+  createTime: string;
 }
 
 export interface UserItem {
   estimateId: number;
   customerName: string;
+  customerPhoneNumber: string;
   customerEmail: string;
   phoneBrand: string;
   phoneName: string;

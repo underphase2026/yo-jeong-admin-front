@@ -13,6 +13,7 @@ const MainPage = () => {
   const [statusAgency, setStatusAgency] =
     useState<getStatusAgencyResponse | null>(null);
   const [selectedQuoteCode, setSelectedQuoteCode] = useState<string>("");
+  const [selectedCreateTime, setSelectedCreateTime] = useState<string>("");
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -47,8 +48,12 @@ const MainPage = () => {
           <QuoteList
             selectedQuoteCode={selectedQuoteCode}
             setSelectedQuoteCode={setSelectedQuoteCode}
+            setSelectedCreateTime={setSelectedCreateTime}
           />
-          <QuoteDetail selectedQuoteCode={selectedQuoteCode} />
+          <QuoteDetail 
+            selectedQuoteCode={selectedQuoteCode} 
+            selectedCreateTime={selectedCreateTime}
+          />
         </div>
       </PageWrapper>
     </>

@@ -4,9 +4,10 @@ import { cn } from "cn-func";
 
 interface QuoteDetailProps {
   selectedQuoteCode: string;
+  selectedCreateTime: string;
 }
 
-const QuoteDetail = ({ selectedQuoteCode }: QuoteDetailProps) => {
+const QuoteDetail = ({ selectedQuoteCode, selectedCreateTime }: QuoteDetailProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [detailData, setDetailData] = useState<getQuoteDetailResponse | null>(
     null
@@ -24,7 +25,9 @@ const QuoteDetail = ({ selectedQuoteCode }: QuoteDetailProps) => {
         const response = await getQuoteDetailApi({
           quoteCode: selectedQuoteCode,
         });
+        console.log("API Response:", response);
         setDetailData(response);
+        console.log("DetailData set to:", response);
       } catch (error) {
         console.error("상세 정보 로딩 실패:", error);
         setDetailData(null);
@@ -35,6 +38,16 @@ const QuoteDetail = ({ selectedQuoteCode }: QuoteDetailProps) => {
 
     fetchQuoteDetail();
   }, [selectedQuoteCode]);
+
+  // detailData 변경 감지
+  useEffect(() => {
+    console.log("detailData changed:", detailData);
+    if (detailData) {
+      console.log("phoneName:", detailData.phoneName);
+      console.log("phoneVolume:", detailData.phoneVolume);
+      console.log("subscriptionType:", detailData.subscriptionType);
+    }
+  }, [detailData]);
 
   if (!selectedQuoteCode) {
     return (
@@ -65,17 +78,44 @@ const QuoteDetail = ({ selectedQuoteCode }: QuoteDetailProps) => {
             </span>
           </h2>
         </div>
-        {detailData?.isPhoneActive && (
+        {detailData?.isPhoneActivate && (
           <div className="px-5 py-2 bg-[#EBF2FF] text-blue-primary rounded-xl text-sm font-bold">
             개통완료
           </div>
         )}
       </div>
 
+
       {/* 유효기간 배너 */}
-      <div className="w-full py-4 bg-[#F0F5FF] text-[#4A72FF] rounded-2xl text-center font-bold text-lg">
-        유효기간: 2025. 11. 25. 17:00
+      <div className={cn(
+        "w-full py-4 rounded-2xl text-center font-bold text-lg",
+        (() => {
+          // selectedCreateTime이 없으면 detailData의 createTime 사용
+          const timeToUse = selectedCreateTime || detailData?.createTime;
+          if (!timeToUse) return "bg-[#F0F5FF] text-[#4A72FF]";
+          const createDate = new Date(timeToUse);
+          const validDate = new Date(createDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const now = new Date();
+          const isExpired = now > validDate;
+          return isExpired 
+            ? "bg-[#F5F6F7] text-[#9EA4AA]" 
+            : "bg-[#F0F5FF] text-[#4A72FF]";
+        })()
+      )}>
+        유효기간: {(() => {
+          const timeToUse = selectedCreateTime || detailData?.createTime;
+          if (!timeToUse) return '-';
+          const createDate = new Date(timeToUse);
+          const validDate = new Date(createDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const year = validDate.getFullYear();
+          const month = String(validDate.getMonth() + 1).padStart(2, '0');
+          const day = String(validDate.getDate()).padStart(2, '0');
+          const hours = String(validDate.getHours()).padStart(2, '0');
+          const minutes = String(validDate.getMinutes()).padStart(2, '0');
+          return `${year}. ${month}. ${day}. ${hours}:${minutes}까지`;
+        })()}
       </div>
+
 
       <div className="grid grid-cols-2 gap-x-16 gap-y-10">
         {/* 왼쪽: 고객정보 */}
@@ -83,7 +123,7 @@ const QuoteDetail = ({ selectedQuoteCode }: QuoteDetailProps) => {
           <h3 className="text-xl font-bold text-black mb-2">고객정보</h3>
           <div className="flex flex-col gap-4">
             <DetailRow label="성명" value={detailData?.customerName} />
-            <DetailRow label="연락처" value="010-5723-1548" />
+            {/* <DetailRow label="연락처" value={detailData?.customerPhoneNumber} /> */}
             <DetailRow label="이메일" value={detailData?.customerEmail} />
           </div>
         </div>
@@ -94,23 +134,23 @@ const QuoteDetail = ({ selectedQuoteCode }: QuoteDetailProps) => {
           <div className="flex flex-col gap-4">
             <DetailRow
               label="기종"
-              value={`${detailData?.phoneName} ${detailData?.phoneVolume}`}
+              value={`${detailData?.phoneName || ''} ${detailData?.phoneVolume || ''}`}
             />
             <DetailRow label="유형" value={detailData?.subscriptionType} />
+            <DetailRow
+              label="최종 가격"
+              value={detailData?.price ? `${detailData.price.toLocaleString()}원` : '-'}
+            />
             <DetailRow label="요금" value={detailData?.phonePlanName} />
             <DetailRow
               label="공통 지원금"
-              value={`${detailData?.subsidyByTelecom.toLocaleString()}원`}
+              value={detailData?.subsidyByTelecom ? `${detailData.subsidyByTelecom.toLocaleString()}원` : '-'}
               isSmall
             />
             <DetailRow
               label="추가지원금"
-              value={`${detailData?.subsidyByAgency.toLocaleString()}원`}
+              value={detailData?.subsidyByAgency ? `${detailData.subsidyByAgency.toLocaleString()}원` : '-'}
               isSmall
-            />
-            <DetailRow
-              label="최종 가격"
-              value={`${detailData?.price.toLocaleString()}원`}
             />
           </div>
         </div>
