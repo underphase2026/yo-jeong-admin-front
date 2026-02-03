@@ -2,28 +2,52 @@ import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import ArrowIcon from "../../icons/arrow";
 import { cn } from "cn-func";
-import { quoteInfo } from "../../../apis";
+import { getUserListApi, UserItem } from "../../../apis";
 
 interface QuoteListProps {
-  quotes: quoteInfo[];
   selectedQuoteCode: string;
   setSelectedQuoteCode: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const QuoteList = ({
-  quotes,
   selectedQuoteCode,
   setSelectedQuoteCode,
 }: QuoteListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const itemsPerPage = 5; // 한 페이지에 5명씩
 
+  // getUserList API 호출
+  useEffect(() => {
+    const fetchUserList = async () => {
+      setIsLoading(true);
+      try {
+        const response = await getUserListApi();
+        setUsers(response.users);
+        
+        // 첫 번째 사용자를 자동 선택
+        if (response.users.length > 0) {
+          setSelectedQuoteCode(response.users[0].authCode);
+        }
+      } catch (error) {
+        console.error("사용자 목록 조회 실패:", error);
+        setUsers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserList();
+  }, [setSelectedQuoteCode]);
+
   // 1. 검색 필터링 로직
-  const filteredQuotes = quotes.filter(
-    (quote) =>
-      quote.customerName.includes(searchTerm) ||
-      quote.quoteCode.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.customerName.includes(searchTerm) ||
+      user.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.authCode.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // 검색어가 바뀔 때마다 1페이지로 리셋
@@ -33,12 +57,12 @@ const QuoteList = ({
 
   // 2. 페이지네이션 계산
   const totalPages = Math.max(
-    Math.ceil(filteredQuotes.length / itemsPerPage),
+    Math.ceil(filteredUsers.length / itemsPerPage),
     1
   );
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredQuotes.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
 
   // 페이지 이동 함수
   const handlePrevPage = () => {
@@ -73,23 +97,26 @@ const QuoteList = ({
       {/* 견적 리스트 영역 (5명 표시) */}
       <div className="flex flex-col gap-3 h-[460px]">
         {currentItems.length > 0 ? (
-          currentItems.map((quote) => (
+          currentItems.map((user) => (
             <div
-              key={quote.quoteId}
-              onClick={() => setSelectedQuoteCode(quote.quoteCode)}
+              key={user.estimateId}
+              onClick={() => setSelectedQuoteCode(user.authCode)}
               className={cn(
                 "flex flex-row justify-between items-center px-5 py-4 border rounded-2xl cursor-pointer transition-all",
-                selectedQuoteCode === quote.quoteCode
+                selectedQuoteCode === user.authCode
                   ? "border-blue-primary bg-blue-50/40 shadow-sm"
                   : "border-gray-100 hover:border-gray-200"
               )}
             >
               <div className="flex flex-col gap-1">
                 <p className="text-base font-semibold text-gray-700">
-                  {quote.customerName}
-                  <span className="ml-1 text-gray-500 font-medium">
-                    ({quote.costomerPhoneNumber})
-                  </span>
+                  {user.customerName}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {user.phoneBrand} {user.phoneName}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {user.elapsedTime}
                 </p>
               </div>
 
@@ -97,12 +124,12 @@ const QuoteList = ({
               <div
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-bold w-20 text-center",
-                  quote.isUserVisit
+                  user.isUserVisit
                     ? "bg-[#EBF2FF] text-blue-primary"
                     : "bg-[#F5F6F7] text-[#9EA4AA]"
                 )}
               >
-                {quote.isUserVisit ? "완료" : "방문 예정"}
+                {user.isUserVisit ? "완료" : "방문 예정"}
               </div>
             </div>
           ))

@@ -108,6 +108,10 @@ const QuoteDetail = ({ selectedQuoteCode }: QuoteDetailProps) => {
               value={`${detailData?.subsidyByAgency.toLocaleString()}원`}
               isSmall
             />
+            <DetailRow
+              label="최종 가격"
+              value={`${detailData?.price.toLocaleString()}원`}
+            />
           </div>
         </div>
       </div>

@@ -24,7 +24,7 @@ const LoginPage = () => {
     try {
       // 요청하신 데이터 형식 { user_id, password } 반영
       const response = await agencyLoginApi({
-        user_id: formData.id,
+        userId: formData.id,
         password: formData.password,
       });
 

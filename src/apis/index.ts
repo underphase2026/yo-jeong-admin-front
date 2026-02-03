@@ -207,6 +207,35 @@ export interface getQuoteDetailResponse {
   subscriptionType: string;
   subsidyByTelecom: number;
   subsidyByAgency: number;
+  price: number;
+}
+
+export interface UserItem {
+  estimateId: number;
+  customerName: string;
+  customerEmail: string;
+  phoneBrand: string;
+  phoneName: string;
+  authCode: string;
+  isUserVisit: boolean;
+  createTime: string;
+  elapsedTime: string;
+}
+
+export interface GetUserListResponse {
+  users: UserItem[];
+}
+
+export const getUserListApi = async (): Promise<GetUserListResponse> => {
+  try {
+    const res = await defaultApiClient.get<GetUserListResponse>(
+      "/agency/getUserList"
+    );
+    return res.data;
+  } catch (error) {
+    console.error("Error in getUserListApi:", error);
+    throw error;
+  }
 }
 
 export const getQuoteDetailApi = async (data: getQuoteDetailRequest) => {

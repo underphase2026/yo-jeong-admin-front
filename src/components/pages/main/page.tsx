@@ -25,11 +25,6 @@ const MainPage = () => {
       try {
         const data = await getStatusAgencyApi();
         setStatusAgency(data);
-
-        // 데이터가 있다면 첫 번째 항목을 자동으로 선택
-        if (data.quotes && data.quotes.length > 0) {
-          setSelectedQuoteCode(data.quotes[0].quoteCode);
-        }
       } catch (error) {
         console.error("현황 데이터 로딩 실패");
       } finally {
@@ -49,9 +44,7 @@ const MainPage = () => {
       <PageWrapper className="flex flex-col gap-5">
         <QuoteInfo statusAgency={statusAgency} />
         <div className="flex flex-row gap-5">
-          {/* 서버에서 받아온 실제 quotes 배열 전달 */}
           <QuoteList
-            quotes={statusAgency?.quotes || []}
             selectedQuoteCode={selectedQuoteCode}
             setSelectedQuoteCode={setSelectedQuoteCode}
           />
