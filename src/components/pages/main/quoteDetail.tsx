@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { getQuoteDetailApi, getQuoteDetailResponse } from "../../../apis";
+import { getQuoteDetailApi, getQuoteDetailResponse, updateVisitStatusApi } from "../../../apis";
 import { cn } from "cn-func";
 
 interface QuoteDetailProps {
   selectedQuoteCode: string;
   selectedCreateTime: string;
+  onStatusUpdate?: () => void;
 }
 
-const QuoteDetail = ({ selectedQuoteCode, selectedCreateTime }: QuoteDetailProps) => {
+const QuoteDetail = ({ selectedQuoteCode, selectedCreateTime, onStatusUpdate }: QuoteDetailProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [detailData, setDetailData] = useState<getQuoteDetailResponse | null>(
     null
@@ -39,6 +40,36 @@ const QuoteDetail = ({ selectedQuoteCode, selectedCreateTime }: QuoteDetailProps
     fetchQuoteDetail();
   }, [selectedQuoteCode]);
 
+  // Handle "견적 완료" button click
+  const handleCompleteQuote = async () => {
+    if (!selectedQuoteCode) return;
+
+    try {
+      const response = await updateVisitStatusApi({
+        authCode: selectedQuoteCode,
+        isUserVisit: true,
+      });
+
+      if (response.success) {
+        alert("견적이 완료되었습니다.");
+        // Refresh the quote detail to reflect the updated status
+        const updatedDetail = await getQuoteDetailApi({
+          quoteCode: selectedQuoteCode,
+        });
+        setDetailData(updatedDetail);
+        // Refresh the status info box
+        if (onStatusUpdate) {
+          onStatusUpdate();
+        }
+      } else {
+        alert("견적 완료 처리에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("견적 완료 처리 실패:", error);
+      alert("견적 완료 처리 중 오류가 발생했습니다.");
+    }
+  };
+
   // detailData 변경 감지
   useEffect(() => {
     console.log("detailData changed:", detailData);
@@ -66,7 +97,7 @@ const QuoteDetail = ({ selectedQuoteCode, selectedCreateTime }: QuoteDetailProps
   return (
     <div className="flex-1 flex flex-col gap-8 p-10 bg-white rounded-[32px] shadow-[0_4px_30px_rgba(0,0,0,0.03)] border border-gray-50 min-h-[600px]">
       {/* 상단 헤더 */}
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 bg-white border-2 border-blue-primary rounded-lg flex items-center justify-center">
             <div className="w-4 h-0.5 bg-blue-primary rounded-full shadow-[0_4px_0_0_#3B82F6,0_-4px_0_0_#3B82F6]" />
@@ -78,11 +109,21 @@ const QuoteDetail = ({ selectedQuoteCode, selectedCreateTime }: QuoteDetailProps
             </span>
           </h2>
         </div>
-        {detailData?.isPhoneActivate && (
-          <div className="px-5 py-2 bg-[#EBF2FF] text-blue-primary rounded-xl text-sm font-bold">
-            개통완료
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {!detailData?.isPhoneActivate && (
+            <button
+              onClick={handleCompleteQuote}
+              className="px-6 py-2.5 bg-blue-primary text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors"
+            >
+              개통 완료
+            </button>
+          )}
+          {detailData?.isPhoneActivate && (
+            <div className="w-[100px] px-6 py-2.5 bg-[#EBF2FF] text-blue-primary rounded-xl text-sm font-bold text-center">
+              개통됨
+            </div>
+          )}
+        </div>
       </div>
 
 

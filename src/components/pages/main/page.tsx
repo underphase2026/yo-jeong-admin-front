@@ -15,6 +15,15 @@ const MainPage = () => {
   const [selectedQuoteCode, setSelectedQuoteCode] = useState<string>("");
   const [selectedCreateTime, setSelectedCreateTime] = useState<string>("");
 
+  const fetchStatusData = async () => {
+    try {
+      const data = await getStatusAgencyApi();
+      setStatusAgency(data);
+    } catch (error) {
+      console.error("현황 데이터 로딩 실패");
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -53,6 +62,7 @@ const MainPage = () => {
           <QuoteDetail 
             selectedQuoteCode={selectedQuoteCode} 
             selectedCreateTime={selectedCreateTime}
+            onStatusUpdate={fetchStatusData}
           />
         </div>
       </PageWrapper>

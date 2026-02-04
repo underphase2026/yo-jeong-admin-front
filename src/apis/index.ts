@@ -220,6 +220,7 @@ export interface UserItem {
   phoneName: string;
   authCode: string;
   isUserVisit: boolean;
+  isPhoneActivate: boolean;
   createTime: string;
   elapsedTime: string;
 }
@@ -253,6 +254,32 @@ export const getQuoteDetailApi = async (data: getQuoteDetailRequest) => {
     );
     return res.data;
   } catch (error) {
+    throw error;
+  }
+};
+
+interface UpdateVisitStatusRequest {
+  authCode: string;
+  isUserVisit: boolean;
+}
+
+interface UpdateVisitStatusResponse {
+  success: boolean;
+  message: string;
+}
+
+export const updateVisitStatusApi = async (data: UpdateVisitStatusRequest) => {
+  try {
+    const res = await defaultApiClient.post<UpdateVisitStatusResponse>(
+      "/agency/updateVisitStatus",
+      {
+        auth_code: data.authCode,
+        is_user_visit: data.isUserVisit,
+      }
+    );
+    return res.data;
+  } catch (error) {
+    console.error("Error in updateVisitStatusApi:", error);
     throw error;
   }
 };

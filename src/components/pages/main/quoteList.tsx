@@ -136,11 +136,11 @@ const QuoteList = ({
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-bold w-20 text-center",
                   user.isUserVisit
-                    ? "bg-[#EBF2FF] text-blue-primary"
+                    ? "bg-blue-primary text-white"
                     : "bg-[#EBF2FF] text-blue-primary"
                 )}
               >
-                {user.isUserVisit ? "방문" : "방문 예정"}
+                {user.isUserVisit ? "완료" : "방문 예정"}
               </div>
             </div>
           ))
