@@ -1,7 +1,7 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { editPriceModalAtom, EditPriceModalCloseAtom } from "./atom";
 import { useState, useMemo, useEffect } from "react";
-import { phonePlans } from "../../../../contents/phonePlans";
+import { phonePlans, getPlanGroup } from "../../../../contents/phonePlans";
 import {
   enrollPriceListApi,
   getPhoneDetailApi,
@@ -117,6 +117,7 @@ const EditPriceModal = () => {
                 )}
               >
                 {plan.name}
+                {getPlanGroup(plan.price) && ` (${getPlanGroup(plan.price)})`}
               </button>
             ))}
           </div>

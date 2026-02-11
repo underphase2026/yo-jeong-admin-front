@@ -107,3 +107,19 @@ export const phonePlans = {
     // },
   ],
 };
+
+/**
+ * 요금제 가격에 따라 군(群) 정보를 반환합니다.
+ * @param price 요금제 가격
+ * @returns 군 정보 (예: "115군", "105군", "95군")
+ */
+export const getPlanGroup = (price: number): string => {
+  if (price >= 110000) {
+    return "115군";
+  } else if (price >= 100000) {
+    return "105군";
+  } else if (price >= 90000) {
+    return "95군";
+  }
+  return "";
+};
