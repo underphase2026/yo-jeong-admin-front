@@ -123,3 +123,21 @@ export const getPlanGroup = (index: number): string => {
   }
   return "";
 };
+
+/**
+ * 요금제 이름과 통신사로부터 군(群) 정보를 반환합니다.
+ * @param planName 요금제 이름
+ * @param telecom 통신사 (SKT, KT, LG U+)
+ * @returns 군 정보 (예: "115군", "105군", "95군")
+ */
+export const getPlanGroupByName = (planName: string, telecom?: string): string => {
+  if (!planName || !telecom) return "";
+  
+  const plans = phonePlans[telecom as keyof typeof phonePlans];
+  if (!plans) return "";
+  
+  const index = plans.findIndex(plan => plan.name === planName);
+  if (index === -1) return "";
+  
+  return getPlanGroup(index);
+};

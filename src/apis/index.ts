@@ -204,6 +204,7 @@ export interface getQuoteDetailResponse {
   phoneName: string;
   phoneVolume: string;
   phonePlanName: string;
+  telecom: string;
   subscriptionType: string;
   subsidyByTelecom: number;
   subsidyByAgency: number;

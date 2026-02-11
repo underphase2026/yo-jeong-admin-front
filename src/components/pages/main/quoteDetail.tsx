@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getQuoteDetailApi, getQuoteDetailResponse, updateVisitStatusApi } from "../../../apis";
 import { cn } from "cn-func";
+import { getPlanGroupByName } from "../../../contents/phonePlans";
 
 interface QuoteDetailProps {
   selectedQuoteCode: string;
@@ -182,7 +183,10 @@ const QuoteDetail = ({ selectedQuoteCode, selectedCreateTime, onStatusUpdate }: 
               label="최종 가격"
               value={detailData?.price ? `${detailData.price.toLocaleString()}원` : '-'}
             />
-            <DetailRow label="요금" value={detailData?.phonePlanName} />
+            <DetailRow 
+              label="요금" 
+              value={detailData?.phonePlanName ? `${detailData.phonePlanName}${getPlanGroupByName(detailData.phonePlanName, detailData.telecom) ? ` (${getPlanGroupByName(detailData.phonePlanName, detailData.telecom)})` : ''}` : '-'} 
+            />
             <DetailRow
               label="공통 지원금"
               value={detailData?.subsidyByTelecom ? `${detailData.subsidyByTelecom.toLocaleString()}원` : '-'}

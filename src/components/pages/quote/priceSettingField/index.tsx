@@ -1,6 +1,7 @@
 import { cn } from "cn-func";
 import { useSetAtom } from "jotai";
 import { EditPriceModalOpenAtom } from "../editPriceModal/atom";
+import { getPlanGroupByName } from "../../../../contents/phonePlans";
 
 // 1. 인터페이스에 부족했던 속성들을 추가합니다.
 interface PriceSettingFieldProps {
@@ -54,7 +55,7 @@ const PriceSettingField = ({
               <OptionGrid>
                 <span className="font-bold">{type}</span>
                 <span className="truncate text-sm">
-                  {opt.plan === "" ? "-" : opt.plan}
+                  {opt.plan === "" ? "-" : `${opt.plan}${getPlanGroupByName(opt.plan, telecom) ? ` (${getPlanGroupByName(opt.plan, telecom)})` : ''}`}
                 </span>
                 <div className="font-semibold text-blue-primary text-sm">
                   {opt.price === 0
