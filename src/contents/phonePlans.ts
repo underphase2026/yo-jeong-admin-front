@@ -109,16 +109,16 @@ export const phonePlans = {
 };
 
 /**
- * 요금제 가격에 따라 군(群) 정보를 반환합니다.
- * @param price 요금제 가격
+ * 요금제 배열 순서에 따라 군(群) 정보를 반환합니다.
+ * @param index 요금제 배열의 인덱스 (0부터 시작)
  * @returns 군 정보 (예: "115군", "105군", "95군")
  */
-export const getPlanGroup = (price: number): string => {
-  if (price >= 110000) {
+export const getPlanGroup = (index: number): string => {
+  if (index === 0) {
     return "115군";
-  } else if (price >= 100000) {
+  } else if (index === 1) {
     return "105군";
-  } else if (price >= 90000) {
+  } else if (index === 2) {
     return "95군";
   }
   return "";

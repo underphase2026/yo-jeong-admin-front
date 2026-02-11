@@ -105,7 +105,7 @@ const EditPriceModal = () => {
             1. 요금제 선택
           </label>
           <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto p-1 border rounded-lg bg-white">
-            {_plans.map((plan) => (
+            {_plans.map((plan, index) => (
               <button
                 key={plan.name}
                 onClick={() => setSelectedPlan(plan)}
@@ -117,7 +117,7 @@ const EditPriceModal = () => {
                 )}
               >
                 {plan.name}
-                {getPlanGroup(plan.price) && ` (${getPlanGroup(plan.price)})`}
+                {getPlanGroup(index) && ` (${getPlanGroup(index)})`}
               </button>
             ))}
           </div>
