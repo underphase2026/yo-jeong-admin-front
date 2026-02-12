@@ -5,6 +5,7 @@ import DefaultLayout from "./layout/defaultLayout";
 import IPhoneQuotePage from "./pages/quote/iphone/page";
 import GalaxyQuotePage from "./pages/quote/galaxy/page";
 import LoginPage from "./pages/login/page";
+import RegisterPage from "./pages/register/page"; // Added import
 import QuoteLayout from "./pages/quote/layout";
 
 const Router = () => {
@@ -14,6 +15,7 @@ const Router = () => {
     <BrowserRouter>
       <Routes>
         <Route path="login" element={<LoginPage />} />
+        <Route path="register" element={<RegisterPage />} /> {/* Added route */}
         <Route path="/" element={<DefaultLayout />}>
           <Route
             index

@@ -105,20 +105,17 @@ export const agencyLoginApi = async (data: AgencyLoginRequest) => {
 };
 
 interface AgencyRegisterRequest {
-  userId: number;
+  user_id: string;
   password: string;
   name: string;
-  sellerName: string;
   address: string;
-  phoneNumber: string;
+  phone_number: string;
   email: string;
-  startTime: string;
-  endTime: string;
 }
 
 export const agencyRegisterApi = async (data: AgencyRegisterRequest) => {
   try {
-    const res = await defaultApiClient.post("/agency/register", data);
+    const res = await defaultApiClient.post("/agency/agencyRegister", data);
     return res.data;
   } catch (error) {
     console.error("Error in agencyRegisterApi:", error);

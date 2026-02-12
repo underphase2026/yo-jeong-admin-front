@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom"; // 이동 로직을 위해 추가
 import loginParter from "../../../assets/loginParter.png";
 import modalLogo from "../../../assets/modalLogo.png";
-import idInput from "../../../assets/idInput.png";
-import passwordInput from "../../../assets/passwordInput.png";
+import idInput from "../../../assets/idInput.svg";
+import passwordInput from "../../../assets/passwordInput.svg";
 import { agencyLoginApi } from "../../../apis"; // API 함수 임포트
 
 const LoginPage = () => {
@@ -115,6 +115,7 @@ const LoginPage = () => {
           <div className="flex h-[24px] w-[440px] items-center justify-between px-[8px]">
             <button
               type="button"
+              onClick={() => navigate("/register")} // Added navigation
               className="text-[16px] font-normal leading-[24px] text-[#B7BEC8] hover:text-[#3572EF]"
             >
               회원가입

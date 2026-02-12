@@ -95,6 +95,7 @@ export interface PriceOptions {
   type: "기기변경" | "번호이동" | "신규가입";
   plan: string;
   price: number;
+  priceListId?: number; // Added to access ID
 }
 
 export interface PriceSettingFeildProps {
@@ -117,6 +118,12 @@ export interface enrollPriceListRequest {
   subsidyByAgency: number;
 }
 
+export interface enrollPriceListResponse {
+  priceListId?: number; 
+  id?: number;
+  // Other fields if any
+}
+
 // phone_brand 파라미터 제외
 export const getPriceListByPhoneApi = async (data: { phoneName: string }) => {
   const res = await defaultApiClient.get<getPriceListByPhoneResponse>(
@@ -136,7 +143,7 @@ export const enrollPriceListApi = async (data: enrollPriceListRequest) => {
     ...data,
     telecom: data.telecom === "LG U+" ? "LG U" : data.telecom,
   };
-  const res = await defaultApiClient.post(
+  const res = await defaultApiClient.post<enrollPriceListResponse>(
     "/agency/enrollPriceListDetail",
     requestData,
   );
@@ -161,5 +168,122 @@ export const getPhoneDetailApi = async (data: getPhoneDetailRequest) => {
       },
     },
   );
+  return res.data;
+};
+
+// ============ Additional Discount APIs ============
+
+// Custom Axios instance for APIs that require CamelCase request body
+// defaultApiClient converts request body to snake_case, which causes 400 Bad Request
+// because NestJS backend expects priceListId (CamelCase).
+import axios from "axios";
+const baseURL = import.meta.env.VITE_API_URL;
+const camelClient = axios.create({ baseURL });
+
+camelClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor: Convert response keys to camelCase (consistent with defaultApiClient)
+import { keysToCamel } from "../utils/caseConverter";
+camelClient.interceptors.response.use(
+  (response) => {
+    if (response.data) {
+      try {
+        response.data = keysToCamel(response.data);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return response;
+  },
+  async (error) => {
+      // Handle 401 like defaultApiClient
+    if (error.response?.status === 401) {
+       // Optional: Redirect to login or just reject?
+       // user module API might not always redirect. Keeping it simple.
+    }
+    return Promise.reject(error);
+  }
+);
+
+export interface AdditionalDiscountItem {
+  "추가 할인 명": string;
+  "가격": number;
+  priceListId?: number;
+  discountId?: number;
+}
+
+export interface GetAdditionalDiscountsResponse {
+  discounts: AdditionalDiscountItem[];
+}
+
+export interface AddAdditionalDiscountRequest {
+  priceListId: number;
+  name: string;
+  price: number;
+}
+
+export interface UpdateAdditionalDiscountRequest {
+  id: number;
+  priceListId: number;
+  newName: string;
+  price: number;
+}
+
+export interface UpdateAdditionalDiscountResponse {
+  name: string;
+  price: number;
+}
+
+export interface DeleteAdditionalDiscountRequest {
+  id: number;
+  priceListId: number;
+}
+
+// Get all additional discounts for an agency
+// Get all additional discounts for an agency
+export const getAdditionalDiscountsApi = async (agencyId: number, priceListId?: number) => {
+  const res = await camelClient.post<GetAdditionalDiscountsResponse>(
+    `/user/getAdditionalDiscounts`,
+    {
+      agencyId: agencyId,
+      priceListId: priceListId,
+    },
+  );
+  return res.data;
+};
+
+// Add new additional discount
+export const addAdditionalDiscountApi = async (
+  data: AddAdditionalDiscountRequest,
+) => {
+  // Use camelClient to preserve camelCase keys
+  const res = await camelClient.post(`/agency/addAdditionalDiscount`, data);
+  return res.data;
+};
+
+// Update existing additional discount
+export const updateAdditionalDiscountApi = async (
+  data: UpdateAdditionalDiscountRequest,
+) => {
+  const res = await camelClient.patch<UpdateAdditionalDiscountResponse>(
+    `/agency/updateAdditionalDiscount`,
+    data,
+  );
+  return res.data;
+};
+
+// Delete additional discount
+export const deleteAdditionalDiscountApi = async (
+  data: DeleteAdditionalDiscountRequest,
+) => {
+  const res = await camelClient.delete(`/agency/deleteAdditionalDiscount`, {
+    data,
+  });
   return res.data;
 };
