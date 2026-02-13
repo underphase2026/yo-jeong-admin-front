@@ -207,65 +207,94 @@ const RegisterPage = () => {
                 </div>
 
                 {/* 우측 섹션: 계약서 동의 */}
-                <div className="flex w-[520px] flex-col border-y border-r border-[#E2E6EC] bg-[#F1F5F9] px-10 py-12 rounded-r-[24px]">
+                <div className="flex w-[520px] flex-col border-y border-r border-[#E2E6EC] bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] px-10 py-12 rounded-r-[24px]">
                     {/* 상단 정보 영역: 좌측 로고/타이틀 높이에 맞춰 여백 조정 */}
                     <div className="mb-[24px] flex h-[108px] flex-col justify-end pb-1">
-                        <h2 className="text-[20px] font-bold text-[#333333]">요정 플랫폼 입점계약서</h2>
-                        <p className="mt-2 text-[14px] text-[#64748B]">
-                            서비스 이용을 위해 아래 모든 조항을 확인하고 동의해주시기 바랍니다.
+                        <h2 className="text-[22px] font-extrabold tracking-tight text-[#1E293B]">요정 플랫폼 입점계약서</h2>
+                        <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#64748B]">
+                            서비스 이용을 위해 아래 모든 조항을 <span className="text-[#3572EF] font-bold">확인하고 동의</span>해주시기 바랍니다.
                         </p>
                     </div>
 
-                    <div className="flex flex-1 flex-col gap-3">
+                    <div className="flex flex-1 flex-col gap-4">
                         {currentClauses.map((clause) => (
                             <button
                                 key={clause.id}
                                 type="button"
                                 onClick={() => setSelectedClause(clause)}
-                                className={`flex items-center justify-between rounded-[16px] border px-5 py-4 transition-all
+                                className={`group flex items-center justify-between rounded-[20px] border px-6 py-5 transition-all duration-300
                                     ${agreements[clause.id] 
-                                        ? 'border-[#3572EF] bg-white text-[#3572EF] shadow-sm' 
-                                        : 'border-[#E2E6EC] bg-[#FFFEFB] text-[#475569] hover:border-[#CBD5E1]'}`}
+                                        ? 'border-[#3572EF] bg-white text-[#3572EF] shadow-[0_8px_20px_rgba(53,114,239,0.12)]' 
+                                        : 'border-[#E2E6EC] bg-white/60 text-[#475569] hover:border-[#3572EF]/40 hover:bg-white hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)]'}`}
                             >
-                                <div className="flex items-center gap-3">
-                                    <div className={`flex h-6 w-6 items-center justify-center rounded-full border
-                                        ${agreements[clause.id] ? 'bg-[#3572EF] border-[#3572EF]' : 'border-[#CBD5E1]'}`}>
-                                        {agreements[clause.id] && (
+                                <div className="flex items-center gap-4">
+                                    <div className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all duration-300
+                                        ${agreements[clause.id] 
+                                            ? 'bg-[#3572EF] border-[#3572EF] scale-110 shadow-[0_0_10px_rgba(53,114,239,0.3)]' 
+                                            : 'border-[#CBD5E1] group-hover:border-[#3572EF]/30'}`}>
+                                        {agreements[clause.id] ? (
                                             <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" />
                                             </svg>
+                                        ) : (
+                                            <div className="h-2 w-2 rounded-full bg-[#CBD5E1] opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                         )}
                                     </div>
-                                    <span className="text-[15px] font-medium">{clause.title}</span>
+                                    <span className={`text-[16px] font-bold tracking-tight transition-colors ${agreements[clause.id] ? 'text-[#3572EF]' : 'text-[#475569]'}`}>
+                                        {clause.title}
+                                    </span>
                                 </div>
-                                <span className="text-[13px] text-[#94A3B8]">상세보기 &gt;</span>
+                                <div className="flex items-center gap-1 text-[13px] font-semibold text-[#94A3B8] group-hover:text-[#3572EF] transition-colors">
+                                    상세보기
+                                    <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </div>
                             </button>
                         ))}
                     </div>
 
                     {/* 페이지네이션 컨트롤 */}
-                    <div className="mt-8 flex items-center justify-between border-t border-[#E2E8F0] pt-6">
+                    <div className="mt-8 flex items-center justify-between border-t border-[#E2E8F0] pt-8">
                         <button 
                             type="button"
                             onClick={() => setContractPage(prev => Math.max(1, prev - 1))}
                             disabled={contractPage === 1}
-                            className={`flex h-11 items-center gap-2 rounded-xl px-5 text-[15px] font-bold transition-all
-                                ${contractPage === 1 ? 'text-[#CBD5E1] cursor-not-allowed' : 'bg-white text-[#334155] shadow-sm hover:bg-[#F8FAFC] border border-[#E2E6EC]'}`}
+                            className={`flex h-12 items-center gap-2 rounded-[14px] px-6 text-[15px] font-bold transition-all duration-300
+                                ${contractPage === 1 
+                                    ? 'text-[#CBD5E1] bg-transparent border border-transparent cursor-not-allowed opacity-50' 
+                                    : 'bg-white text-[#334155] shadow-sm hover:bg-[#F8FAFC] border border-[#E2E6EC] hover:border-[#CBD5E1] active:scale-95'}`}
                         >
-                            &lt; 이전
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            이전
                         </button>
-                        <div className="flex items-center gap-2">
-                            <span className={`h-2 w-2 rounded-full ${contractPage === 1 ? 'bg-[#3572EF]' : 'bg-[#CBD5E1]'}`}></span>
-                            <span className={`h-2 w-2 rounded-full ${contractPage === 2 ? 'bg-[#3572EF]' : 'bg-[#CBD5E1]'}`}></span>
+                        
+                        <div className="flex items-center gap-2.5">
+                            {[1, 2].map((p) => (
+                                <button
+                                    key={p}
+                                    type="button"
+                                    onClick={() => setContractPage(p)}
+                                    className={`h-2.5 rounded-full transition-all duration-300 ${contractPage === p ? 'w-8 bg-[#3572EF]' : 'w-2.5 bg-[#CBD5E1] hover:bg-[#94A3B8]'}`}
+                                />
+                            ))}
                         </div>
+
                         <button 
                             type="button"
                             onClick={() => setContractPage(prev => Math.min(2, prev + 1))}
                             disabled={contractPage === 2}
-                            className={`flex h-11 items-center gap-2 rounded-xl px-5 text-[15px] font-bold transition-all
-                                ${contractPage === 2 ? 'text-[#CBD5E1] cursor-not-allowed' : 'bg-[#3572EF] text-white shadow-sm hover:opacity-90'}`}
+                            className={`flex h-12 items-center gap-2 rounded-[14px] px-6 text-[15px] font-bold transition-all duration-300
+                                ${contractPage === 2 
+                                    ? 'text-[#CBD5E1] bg-transparent border border-transparent cursor-not-allowed opacity-50' 
+                                    : 'bg-[#3572EF] text-white shadow-[0_4px_12px_rgba(53,114,239,0.3)] hover:opacity-90 active:scale-95'}`}
                         >
-                            다음 &gt;
+                            다음
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                            </svg>
                         </button>
                     </div>
                 </div>
