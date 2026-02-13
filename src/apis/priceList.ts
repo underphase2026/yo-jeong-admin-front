@@ -259,19 +259,18 @@ export const getAdditionalDiscountsApi = async (agencyId: number, priceListId?: 
     },
   );
 
-  // 백엔드 응답 키값 매핑 (스크린샷 및 다양한 백엔드 버전 대응)
+  // 백엔드 응답 키값 매핑 (다양한 백엔드 버전 대응)
   if (res.data && Array.isArray(res.data.discounts)) {
     res.data.discounts = res.data.discounts.map((item: any) => {
       // 1. 이름/가격 매핑
       const mappedItem = {
         ...item,
-        "할인명": item["할인명"] || item["추가 할인 명"] || item["name"] || "-",
-        "할인가격": item["할인가격"] || item["가격"] || item["price"] || 0,
+        "할인명": item["name"] || item["할인명"] || item["추가 할인 명"] || "-",
+        "할인가격": item["price"] !== undefined ? item["price"] : (item["할인가격"] || item["가격"] || 0),
       };
 
-      // 2. ID 매핑 강화 (백엔드에서 올 수 있는 모든 가능성 체크)
-      // camelClient에서 keysToCamel을 쓰므로 snake_case는 이미 camelCase로 변환되어 있을 것임 (예: price_list_id -> priceListId)
-      mappedItem.discountId = item.discountId || item.id || item.discount_id;
+      // 2. ID 매핑 (가능한 모든 키 체크)
+      mappedItem.discountId = item.id || item.discountId || item.discount_id || item.idx;
       mappedItem.priceListId = item.priceListId || item.price_list_id || item.priceList_id || priceListId;
 
       return mappedItem;

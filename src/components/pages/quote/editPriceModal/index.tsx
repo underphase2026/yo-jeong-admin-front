@@ -6,6 +6,9 @@ import {
   enrollPriceListApi,
   getPhoneDetailApi,
   getPriceListByPhoneApi,
+  addAdditionalDiscountApi,
+  updateAdditionalDiscountApi,
+  deleteAdditionalDiscountApi,
   type AdditionalDiscountItem,
   getAdditionalDiscountsApi,
   type PriceSettingFeildProps,
@@ -109,6 +112,17 @@ const EditPriceModal = () => {
               }
             });
             setPriceListMap(map);
+            
+            // 초기 진입 시 요금제가 선택되어 있지 않다면 첫 번째 요금제 자동 선택
+            const planNames = Object.keys(map);
+            if (planNames.length > 0) {
+              const firstPlanName = planNames[0];
+              const planInfo = _plans.find(p => p.name === firstPlanName);
+              if (planInfo) {
+                setSelectedPlan(planInfo);
+                setPriceListId(map[firstPlanName]);
+              }
+            }
           }
           
           // 4. Agency ID 추출
@@ -156,8 +170,11 @@ const EditPriceModal = () => {
     if (selectedPlan && priceListMap[selectedPlan.name]) {
       setPriceListId(priceListMap[selectedPlan.name]);
     } else {
-      setPriceListId(null);
-      setDiscounts([]);
+      // 요금제 선택이 해제된 경우에만 초기화 (자동 선택된 경우는 유지됨)
+      if (selectedPlan === null) {
+        setPriceListId(null);
+        setDiscounts([]);
+      }
     }
   }, [selectedPlan, priceListMap]);
 
@@ -197,6 +214,80 @@ const EditPriceModal = () => {
   const finalPrice = useMemo(() => {
     return fetchedOriginalPrice - fetchedCommonDiscount - discountNumber;
   }, [fetchedOriginalPrice, fetchedCommonDiscount, discountNumber]);
+
+  /**
+   * PriceList ID를 보장하는 공통 함수
+   */
+  const ensurePriceListId = async () => {
+    let currentId = priceListId;
+    if (currentId) return currentId;
+
+    // 1. 요금제 선택 확인 (없으면 첫 번째 자동 선택)
+    let targetPlan = selectedPlan;
+    if (!targetPlan) {
+      if (_plans.length > 0) {
+        targetPlan = _plans[0];
+        setSelectedPlan(targetPlan);
+        // map에서 미리 찾아보기
+        currentId = priceListMap[targetPlan.name] || null;
+      } else {
+        // 요금제가 아예 없는 경우는 드물지만 방어 코드 유지
+        return null;
+      }
+    }
+
+    if (currentId) {
+        setPriceListId(currentId);
+        return currentId;
+    }
+
+    // 2. ID가 없으면 서버에 생성 요청 (Enroll)
+    try {
+      const enrollRes = await enrollPriceListApi({
+        phoneBrand,
+        phoneName: device,
+        phonePlanName: targetPlan.name,
+        telecom,
+        subscriptionType: option!.type,
+        subsidyByAgency: discountNumber,
+        additionalDiscounts: [],
+      });
+
+      currentId = (enrollRes.priceListId || enrollRes.id) ?? null;
+
+      // 3. 생성 후에도 ID가 없으면 재조회 시도
+      if (!currentId) {
+        try {
+          const verifyRes = await getPriceListByPhoneApi({ phoneName: device });
+          const searchTelecom = telecom === "LG U+" ? "LG U" : telecom;
+          const verifySetting = verifyRes.priceList.find(
+            (p) => p.telecom === telecom || p.telecom === searchTelecom
+          );
+          const verifyOption = verifySetting?.options.find(
+            (opt) => opt.plan === targetPlan!.name && opt.type === option?.type
+          );
+          if (verifyOption?.priceListId) {
+            currentId = verifyOption.priceListId;
+          }
+        } catch (err) {
+          console.error("ID 재조회 실패", err);
+        }
+      }
+
+      if (currentId) {
+        setPriceListId(currentId);
+        setPriceListMap((prev) => ({ ...prev, [targetPlan!.name]: currentId! }));
+        return currentId;
+      } else {
+        alert("가격표 ID를 생성할 수 없습니다. (백엔드 응답 오류)");
+        return null;
+      }
+    } catch (e) {
+      console.error("가격표 생성 실패:", e);
+      alert("가격표 생성 중 오류가 발생했습니다.");
+      return null;
+    }
+  };
 
   const handleSubmit = async () => {
     if (!selectedPlan) return alert("요금제를 선택해주세요.");
@@ -309,8 +400,8 @@ const EditPriceModal = () => {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => {
+                       <button
+                        onClick={async () => {
                           if (!discountFormName.trim()) {
                             alert("할인명을 입력해주세요.");
                             return;
@@ -320,20 +411,31 @@ const EditPriceModal = () => {
                             return;
                           }
                           
-                          // 로컬 상태에만 추가 (ID는 페이크로 생성)
-                          setDiscounts([
-                            ...discounts,
-                            {
-                              할인명: discountFormName,
-                              할인가격: Number(discountFormPrice),
-                              discountId: Date.now(), // 임시 ID
-                              priceListId: priceListId || undefined,
-                            },
-                          ]);
+                          // 공통 함수를 통해 ID 확보 (요금제 자동 선택 포함)
+                          const currentId = await ensurePriceListId();
+                          if (!currentId) return;
 
-                          setIsAddingDiscount(false);
-                          setDiscountFormName("");
-                          setDiscountFormPrice("");
+                          // 2. 추가 할인 API 호출
+                          try {
+                            await addAdditionalDiscountApi({
+                              priceListId: currentId,
+                              name: discountFormName,
+                              price: Number(discountFormPrice),
+                            });
+                            
+                            // 3. 목록 새로고침
+                            if (agencyId) {
+                               const res = await getAdditionalDiscountsApi(agencyId, currentId);
+                               setDiscounts(Array.isArray(res.discounts) ? res.discounts : []);
+                            }
+
+                            setIsAddingDiscount(false);
+                            setDiscountFormName("");
+                            setDiscountFormPrice("");
+                          } catch (e) {
+                            console.error("추가 할인 등록 실패:", e);
+                            alert("추가 할인 등록에 실패했습니다.");
+                          }
                         }}
                         className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                       >
@@ -383,22 +485,43 @@ const EditPriceModal = () => {
                            </div>
                          </div>
                          <div className="flex gap-2">
-                           <button
-                             onClick={() => {
+                            <button
+                             onClick={async () => {
                                if (!discountFormName.trim() || !discountFormPrice) {
                                  alert("모든 필드를 입력해주세요.");
                                  return;
                                }
                                
-                               // 로컬 상태만 업데이트
-                               setDiscounts(discounts.map((d, i) => 
-                                 (d.discountId === editingDiscountId || i === editingDiscountId) 
-                                   ? { ...d, "할인명": discountFormName, "할인가격": Number(discountFormPrice) }
-                                   : d
-                               ));
-                               setEditingDiscountId(null);
-                               setDiscountFormName("");
-                               setDiscountFormPrice("");
+                               const targetId = (discount.discountId || (discount as any).id || (discount as any).idx) as number;
+                               const currentId = await ensurePriceListId();
+
+                               if (!targetId || !currentId) {
+                                  console.error("ID 부족:", { targetId, currentId, discount });
+                                  alert("식별 ID 정보가 부족하여 수정할 수 없습니다.");
+                                  return;
+                               }
+
+                               try {
+                                 await updateAdditionalDiscountApi({
+                                   id: targetId,
+                                   priceListId: currentId,
+                                   newName: discountFormName,
+                                   price: Number(discountFormPrice),
+                                 });
+                                 
+                                 // 목록 새로고침
+                                 if (agencyId) {
+                                    const res = await getAdditionalDiscountsApi(agencyId, currentId);
+                                    setDiscounts(Array.isArray(res.discounts) ? res.discounts : []);
+                                 }
+                                 
+                                 setEditingDiscountId(null);
+                                 setDiscountFormName("");
+                                 setDiscountFormPrice("");
+                               } catch (e) {
+                                 console.error("수정 실패:", e);
+                                 alert("수정에 실패했습니다.");
+                               }
                              }}
                              className="flex-1 px-3 py-1.5 text-xs font-medium bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
                            >
@@ -435,11 +558,33 @@ const EditPriceModal = () => {
                           >
                             수정
                           </button>
-                          <button
-                            onClick={() => {
+                           <button
+                            onClick={async () => {
                               if (!confirm("정말 삭제하시겠습니까?")) return;
-                              // 로컬 상태에서만 삭제
-                              setDiscounts(discounts.filter((_, i) => i !== index));
+                              
+                              const targetId = (discount.discountId || (discount as any).id || (discount as any).idx) as number;
+                              const currentId = await ensurePriceListId();
+
+                              if (!targetId || !currentId) {
+                                 console.error("ID 부족:", { targetId, currentId, discount });
+                                 alert("식별 ID 정보가 부족하여 삭제할 수 없습니다.");
+                                 return;
+                              }
+
+                              try {
+                                await deleteAdditionalDiscountApi({ 
+                                    id: targetId,
+                                    priceListId: currentId
+                                });
+                                // 목록 새로고침
+                                if (agencyId) {
+                                   const res = await getAdditionalDiscountsApi(agencyId, currentId);
+                                   setDiscounts(Array.isArray(res.discounts) ? res.discounts : []);
+                                }
+                              } catch (e) {
+                                console.error("삭제 실패:", e);
+                                alert("삭제에 실패했습니다.");
+                              }
                             }}
                             className="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                           >
