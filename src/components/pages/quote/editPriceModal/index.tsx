@@ -112,17 +112,6 @@ const EditPriceModal = () => {
               }
             });
             setPriceListMap(map);
-            
-            // 초기 진입 시 요금제가 선택되어 있지 않다면 첫 번째 요금제 자동 선택
-            const planNames = Object.keys(map);
-            if (planNames.length > 0) {
-              const firstPlanName = planNames[0];
-              const planInfo = _plans.find(p => p.name === firstPlanName);
-              if (planInfo) {
-                setSelectedPlan(planInfo);
-                setPriceListId(map[firstPlanName]);
-              }
-            }
           }
           
           // 4. Agency ID 추출
@@ -181,11 +170,10 @@ const EditPriceModal = () => {
   // PriceList ID 변경 시 할인 목록 조회
   useEffect(() => {
     const fetchDiscounts = async () => {
-      if (priceListId && agencyId) {
+      if (agencyId) {
         try {
-          // priceListId를 쿼리 파라미터로 전달하여 해당 가격표의 할인만 조회
-          const res = await getAdditionalDiscountsApi(agencyId, priceListId);
-          // 안전한 null/undefined 체크
+          // priceListId가 없더라도 agencyId만으로 조회가 가능해야 함
+          const res = await getAdditionalDiscountsApi(agencyId, priceListId || undefined);
           if (res && Array.isArray(res.discounts)) {
             setDiscounts(res.discounts);
           } else {
@@ -411,21 +399,17 @@ const EditPriceModal = () => {
                             return;
                           }
                           
-                          // 공통 함수를 통해 ID 확보 (요금제 자동 선택 포함)
-                          const currentId = await ensurePriceListId();
-                          if (!currentId) return;
-
                           // 2. 추가 할인 API 호출
                           try {
-                            await addAdditionalDiscountApi({
-                              priceListId: currentId,
+                            const res = await addAdditionalDiscountApi({
+                              priceListId: priceListId || 0, // 0 또는 특정 의미있는 null 값 전달
                               name: discountFormName,
                               price: Number(discountFormPrice),
                             });
                             
                             // 3. 목록 새로고침
                             if (agencyId) {
-                               const res = await getAdditionalDiscountsApi(agencyId, currentId);
+                               const res = await getAdditionalDiscountsApi(agencyId, priceListId || undefined);
                                setDiscounts(Array.isArray(res.discounts) ? res.discounts : []);
                             }
 
@@ -493,10 +477,8 @@ const EditPriceModal = () => {
                                }
                                
                                const targetId = (discount.discountId || (discount as any).id || (discount as any).idx) as number;
-                               const currentId = await ensurePriceListId();
 
-                               if (!targetId || !currentId) {
-                                  console.error("ID 부족:", { targetId, currentId, discount });
+                               if (!targetId) {
                                   alert("식별 ID 정보가 부족하여 수정할 수 없습니다.");
                                   return;
                                }
@@ -504,14 +486,14 @@ const EditPriceModal = () => {
                                try {
                                  await updateAdditionalDiscountApi({
                                    id: targetId,
-                                   priceListId: currentId,
+                                   priceListId: priceListId || 0,
                                    newName: discountFormName,
                                    price: Number(discountFormPrice),
                                  });
                                  
                                  // 목록 새로고침
                                  if (agencyId) {
-                                    const res = await getAdditionalDiscountsApi(agencyId, currentId);
+                                    const res = await getAdditionalDiscountsApi(agencyId, priceListId || undefined);
                                     setDiscounts(Array.isArray(res.discounts) ? res.discounts : []);
                                  }
                                  
@@ -563,10 +545,8 @@ const EditPriceModal = () => {
                               if (!confirm("정말 삭제하시겠습니까?")) return;
                               
                               const targetId = (discount.discountId || (discount as any).id || (discount as any).idx) as number;
-                              const currentId = await ensurePriceListId();
 
-                              if (!targetId || !currentId) {
-                                 console.error("ID 부족:", { targetId, currentId, discount });
+                              if (!targetId) {
                                  alert("식별 ID 정보가 부족하여 삭제할 수 없습니다.");
                                  return;
                               }
@@ -574,11 +554,11 @@ const EditPriceModal = () => {
                               try {
                                 await deleteAdditionalDiscountApi({ 
                                     id: targetId,
-                                    priceListId: currentId
+                                    priceListId: priceListId || 0
                                 });
                                 // 목록 새로고침
                                 if (agencyId) {
-                                   const res = await getAdditionalDiscountsApi(agencyId, currentId);
+                                   const res = await getAdditionalDiscountsApi(agencyId, priceListId || undefined);
                                    setDiscounts(Array.isArray(res.discounts) ? res.discounts : []);
                                 }
                               } catch (e) {
