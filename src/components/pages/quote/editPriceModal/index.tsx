@@ -37,7 +37,6 @@ const EditPriceModal = () => {
   const { isOpen, device, telecom, option, phoneBrand } =
     useAtomValue(editPriceModalAtom);
   const closeModal = useSetAtom(EditPriceModalCloseAtom);
-
   const [selectedPlan, setSelectedPlan] = useState<{
     name: string;
     price: number;
@@ -63,13 +62,21 @@ const EditPriceModal = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const isFirstLoad = useRef(true);
 
+  // 1. 모달이 열릴 때 초기 상태 설정 (option.plan이 있으면 해당 요금제 정보 설정)
+  useEffect(() => {
+    if (isOpen && telecom) {
+      const plans = phonePlans[telecom as keyof typeof phonePlans] || [];
+      const initialPlan = plans.find(p => p.name === option?.plan);
+      setSelectedPlan(initialPlan || null);
+    }
+  }, [isOpen, telecom, option?.plan]);
+
   /**
    * 모달이 열릴 때: 출고가와 공시지원금을 직접 다시 로드합니다.
    */
   useEffect(() => {
     if (isOpen && device && telecom) {
-      // 입력값 초기화 (먼저 실행)
-      setSelectedPlan(null);
+      // 입력값 초기화 (selectedPlan은 위에서 처리하므로 제외)
       setSalesDiscount("");
       setDiscounts([]);
       setPriceListId(null);
@@ -111,14 +118,17 @@ const EditPriceModal = () => {
               targetSetting.options.forEach(opt => {
                 if (opt.type === option?.type && opt.priceListId) {
                   map[opt.plan] = opt.priceListId;
-                  if (!foundPriceListId) foundPriceListId = opt.priceListId;
+                  // 현재 "이미 선택된" (클릭한 행 기반) 요금제에 대한 ID 찾기
+                  if (opt.plan === option?.plan) {
+                    foundPriceListId = opt.priceListId;
+                  }
                 }
               });
               setPriceListMap(map);
             }
           }
 
-          // 3. (중복 제거) 여기서 직접 호출하지 않고, 아래의 useEffect가 priceListId 변경을 감지하여 호출하도록 함
+          // 3. (중복 제거) 여기서 직접 호출하지 않고, 아래의 useEffect가 priceListId 변경을 감지하도록 함
           if (foundPriceListId) {
             setPriceListId(foundPriceListId);
           }
@@ -127,9 +137,6 @@ const EditPriceModal = () => {
           console.error("모달 데이터 로드 실패:", e);
         } finally {
           setIsInitialLoading(false);
-          // 상태 업데이트 후 reactive useEffect가 이벤트를 받기 위해 약간의 지연 후 false로 전환 시도하거나
-          // isFirstLoad.current = false; 를 여기서 바로 하지 않고, fetchDiscounts 완료 후로 미룰 수 있음
-          // 하지만 여기서는 reactive useEffect가 priceListId 변경을 감지할 수 있도록 보장해야 함.
           setTimeout(() => {
             isFirstLoad.current = false;
           }, 0);
@@ -138,7 +145,7 @@ const EditPriceModal = () => {
 
       loadModalData();
     }
-  }, [isOpen, device, telecom, option]); // option added dependency
+  }, [isOpen, device, telecom, option?.type, option?.plan]);
 
   // 요금제 변경 시 PriceList ID 찾기
   useEffect(() => {
@@ -148,7 +155,7 @@ const EditPriceModal = () => {
     if (selectedPlan && priceListMap[selectedPlan.name]) {
       setPriceListId(priceListMap[selectedPlan.name]);
     } else {
-      // 요금제 선택이 해제된 경우에만 초기화
+      // 요금제 선택이 수동으로 해제된 경우에만 초기화
       if (selectedPlan === null && !isInitialLoading) {
         setPriceListId(null);
         setDiscounts([]);
@@ -159,13 +166,13 @@ const EditPriceModal = () => {
   // PriceList ID 변경 시 할인 목록 조회 (사용자 조작 및 초기 로드 완료 대응)
   useEffect(() => {
     // 1. 대리점 ID가 없거나 초기 로딩 중인 경우 건너뜀
-    // 하지만 foundPriceListId가 setPriceListId 되었을 때 isInitialLoading이 true일 수 있음.
-    // 따라서 isInitialLoading이 false가 된 시점에도 호출되도록 의존성에 포함.
-    if (!agencyId || isInitialLoading) return;
+    // 2. priceListId가 없는 경우 호출하지 않음 (사용자 요구사항: 무조건 둘 다 포함)
+    if (!agencyId || isInitialLoading || !priceListId) return;
 
     const fetchDiscounts = async () => {
       try {
-        const res = await getAdditionalDiscountsApi(agencyId, priceListId || undefined);
+        // console.log("Fetching discounts with:", { agencyId, priceListId }); // 디버깅용
+        const res = await getAdditionalDiscountsApi(agencyId, priceListId);
         if (res && Array.isArray(res.discounts)) {
           setDiscounts(res.discounts);
         } else {
