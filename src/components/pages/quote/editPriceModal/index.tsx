@@ -258,7 +258,8 @@ const EditPriceModal = () => {
           </div>
         </div>
 
-        {/* 2. 추가 할인 관리 */}
+        {/* 2. 추가 할인 관리 (Temporary Disabled) */}
+        {false && (
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
             <label className="text-sm font-bold text-gray-700">
@@ -550,6 +551,7 @@ const EditPriceModal = () => {
             ))}
           </div>
         </div>
+        )}
 
         {/* 3. 가격 계산기 구역 (Gray 디자인) */}
         <div className="flex flex-col gap-3 bg-gray-50 p-4 rounded-xl text-sm border border-gray-100">
@@ -588,8 +590,8 @@ const EditPriceModal = () => {
             </div>
           </div>
 
-          {/* 추가 할인 표시 */}
-          {totalAdditionalDiscount > 0 && (
+          {/* 추가 할인 표시 (Temporary Disabled) */}
+          {false && totalAdditionalDiscount > 0 && (
             <div className="flex justify-between text-purple-500">
               <span>추가 할인 (-)</span>
               <span className="font-medium">
