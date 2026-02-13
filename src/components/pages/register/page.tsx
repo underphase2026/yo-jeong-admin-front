@@ -208,7 +208,8 @@ const RegisterPage = () => {
 
                 {/* 우측 섹션: 계약서 동의 */}
                 <div className="flex w-[520px] flex-col border-y border-r border-[#E2E6EC] bg-[#F1F5F9] px-10 py-12 rounded-r-[24px]">
-                    <div className="mb-6">
+                    {/* 상단 정보 영역: 좌측 로고/타이틀 높이에 맞춰 여백 조정 */}
+                    <div className="mb-[24px] flex h-[108px] flex-col justify-end pb-1">
                         <h2 className="text-[20px] font-bold text-[#333333]">요정 플랫폼 입점계약서</h2>
                         <p className="mt-2 text-[14px] text-[#64748B]">
                             서비스 이용을 위해 아래 모든 조항을 확인하고 동의해주시기 바랍니다.
