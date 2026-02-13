@@ -4,7 +4,6 @@ import Header from "../../../layout/header";
 import PageWrapper from "../../../layout/pageWrapper";
 import { useQuotePage } from "../hooks/useQuotePage";
 import PriceSettingField from "../priceSettingField";
-import EditPriceModal from "../editPriceModal";
 
 /**
  * 아이폰 기기 데이터 구조 정의
@@ -74,8 +73,6 @@ const IPhoneQuotePage = () => {
         )}
       </PageWrapper>
 
-      {/* 편집 모달 - Jotai 상태에 따라 열림/닫힘 및 데이터 연동 */}
-      <EditPriceModal />
     </>
   );
 };

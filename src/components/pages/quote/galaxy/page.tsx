@@ -4,7 +4,6 @@ import Header from "../../../layout/header";
 import PageWrapper from "../../../layout/pageWrapper";
 import { useQuotePage } from "../hooks/useQuotePage";
 import PriceSettingField from "../priceSettingField";
-import EditPriceModal from "../editPriceModal";
 
 // 기기 데이터 구조 정의
 interface DeviceItem {
@@ -61,7 +60,6 @@ const GalaxyQuotePage = () => {
         )}
       </PageWrapper>
 
-      <EditPriceModal />
     </>
   );
 };

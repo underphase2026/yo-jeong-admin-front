@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { editPriceModalAtom, EditPriceModalCloseAtom } from "./atom";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { phonePlans, getPlanGroup } from "../../../../contents/phonePlans";
 import {
   enrollPriceListApi,
@@ -11,7 +11,6 @@ import {
   deleteAdditionalDiscountApi,
   type AdditionalDiscountItem,
   getAdditionalDiscountsApi,
-  type PriceSettingFeildProps,
 } from "../../../../apis/priceList";
 import { getSubsidy } from "../../../../apis"; // index.ts의 getSubsidy 활용
 import { cn } from "cn-func";
@@ -62,6 +61,7 @@ const EditPriceModal = () => {
 
   // 초기 로딩 상태
   const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const isFirstLoad = useRef(true);
 
   /**
    * 모달이 열릴 때: 출고가와 공시지원금을 직접 다시 로드합니다.
@@ -81,72 +81,58 @@ const EditPriceModal = () => {
 
       const loadModalData = async () => {
         setIsInitialLoading(true);
+        isFirstLoad.current = true;
+        
         try {
-          // 1. 기기 상세(출고가) 조회
-          const detailRes = await getPhoneDetailApi({ phoneName: device });
-          setFetchedOriginalPrice(detailRes.originalPrice);
-
-          // 2. 공시지원금 조회 (LG U+ 조건 처리)
           const searchTelecom = telecom === "LG U+" ? "LG U" : telecom;
-          const subsidyRes = await getSubsidy(searchTelecom);
-          setFetchedCommonDiscount(subsidyRes);
-
-          // 3. 가격표 목록 조회하여 ID 매핑
-          const priceListRes = await getPriceListByPhoneApi({ phoneName: device });
-          // 현재 통신사/가입유형에 맞는 항목 찾기
-          const targetSetting: PriceSettingFeildProps | undefined = priceListRes.priceList.find(
-            p => (p.telecom === telecom || p.telecom === searchTelecom)
-          );
-
-          let foundPriceListId: number | null = null;
-          if (targetSetting) {
-            const map: Record<string, number> = {};
-            targetSetting.options.forEach(opt => {
-              // subscriptionType 검사 (option.type)
-              if (opt.type === option?.type && opt.priceListId) {
-                map[opt.plan] = opt.priceListId;
-                // 첫 번째로 찾은 priceListId를 저장 (추가 할인 조회용)
-                if (!foundPriceListId) {
-                  foundPriceListId = opt.priceListId;
-                }
-              }
-            });
-            setPriceListMap(map);
-          }
-          
-          // 4. Agency ID 추출
           const extractedAgencyId = getAgencyIdFromToken();
           const numericAgencyId = Number(extractedAgencyId);
           setAgencyId(numericAgencyId);
 
-          // 5. 추가 할인 목록 조회 (priceListId가 있을 경우)
-          if (foundPriceListId && numericAgencyId) {
-            console.log("🔍 추가 할인 조회 시작:", { foundPriceListId, numericAgencyId });
-            try {
-              const discountRes = await getAdditionalDiscountsApi(numericAgencyId, foundPriceListId);
-              console.log("✅ 추가 할인 응답:", discountRes);
-              
-              // 안전한 null/undefined 체크
-              if (discountRes && Array.isArray(discountRes.discounts)) {
-                console.log("📝 할인 목록 설정:", discountRes.discounts);
-                setDiscounts(discountRes.discounts);
-              } else {
-                console.warn("⚠️ 응답에 discounts 배열이 없음:", discountRes);
-                setDiscounts([]);
-              }
-            } catch (e) {
-              console.error("❌ 추가 할인 목록 조회 실패:", e);
-              // 오류 발생해도 빈 배열로 설정하여 UI가 깨지지 않도록 함
-              setDiscounts([]);
+          // 1. 모든 데이터 (기기정보, 지원금, 가격표) 병렬 조회
+          const [detailRes, subsidyRes, priceListRes] = await Promise.all([
+            getPhoneDetailApi({ phoneName: device }),
+            getSubsidy(searchTelecom),
+            getPriceListByPhoneApi({ phoneName: device })
+          ]);
+
+          setFetchedOriginalPrice(detailRes.originalPrice);
+          setFetchedCommonDiscount(subsidyRes);
+
+          // 2. 가격표 ID 매칭
+          let foundPriceListId: number | null = null;
+          if (priceListRes.priceList) {
+            const targetSetting = priceListRes.priceList.find(
+              p => (p.telecom === telecom || p.telecom === searchTelecom)
+            );
+
+            if (targetSetting) {
+              const map: Record<string, number> = {};
+              targetSetting.options.forEach(opt => {
+                if (opt.type === option?.type && opt.priceListId) {
+                  map[opt.plan] = opt.priceListId;
+                  if (!foundPriceListId) foundPriceListId = opt.priceListId;
+                }
+              });
+              setPriceListMap(map);
             }
-          } else {
-            console.log("ℹ️ 추가 할인 조회 건너뜀:", { foundPriceListId, numericAgencyId });
+          }
+
+          // 3. (중복 제거) 여기서 직접 호출하지 않고, 아래의 useEffect가 priceListId 변경을 감지하여 호출하도록 함
+          if (foundPriceListId) {
+            setPriceListId(foundPriceListId);
           }
 
         } catch (e) {
           console.error("모달 데이터 로드 실패:", e);
         } finally {
           setIsInitialLoading(false);
+          // 상태 업데이트 후 reactive useEffect가 이벤트를 받기 위해 약간의 지연 후 false로 전환 시도하거나
+          // isFirstLoad.current = false; 를 여기서 바로 하지 않고, fetchDiscounts 완료 후로 미룰 수 있음
+          // 하지만 여기서는 reactive useEffect가 priceListId 변경을 감지할 수 있도록 보장해야 함.
+          setTimeout(() => {
+            isFirstLoad.current = false;
+          }, 0);
         }
       };
 
@@ -156,39 +142,43 @@ const EditPriceModal = () => {
 
   // 요금제 변경 시 PriceList ID 찾기
   useEffect(() => {
+    // 초기 로딩 중에는 priceListMap이 채워지고 있는 중이므로 덮어쓰지 않도록 함
+    if (isInitialLoading) return;
+
     if (selectedPlan && priceListMap[selectedPlan.name]) {
       setPriceListId(priceListMap[selectedPlan.name]);
     } else {
-      // 요금제 선택이 해제된 경우에만 초기화 (자동 선택된 경우는 유지됨)
-      if (selectedPlan === null) {
+      // 요금제 선택이 해제된 경우에만 초기화
+      if (selectedPlan === null && !isInitialLoading) {
         setPriceListId(null);
         setDiscounts([]);
       }
     }
-  }, [selectedPlan, priceListMap]);
+  }, [selectedPlan, priceListMap, isInitialLoading]);
 
-  // PriceList ID 변경 시 할인 목록 조회
+  // PriceList ID 변경 시 할인 목록 조회 (사용자 조작 및 초기 로드 완료 대응)
   useEffect(() => {
+    // 1. 대리점 ID가 없거나 초기 로딩 중인 경우 건너뜀
+    // 하지만 foundPriceListId가 setPriceListId 되었을 때 isInitialLoading이 true일 수 있음.
+    // 따라서 isInitialLoading이 false가 된 시점에도 호출되도록 의존성에 포함.
+    if (!agencyId || isInitialLoading) return;
+
     const fetchDiscounts = async () => {
-      if (agencyId) {
-        try {
-          // priceListId가 없더라도 agencyId만으로 조회가 가능해야 함
-          const res = await getAdditionalDiscountsApi(agencyId, priceListId || undefined);
-          if (res && Array.isArray(res.discounts)) {
-            setDiscounts(res.discounts);
-          } else {
-            setDiscounts([]);
-          }
-        } catch (e) {
-          console.error("할인 목록 조회 실패:", e);
+      try {
+        const res = await getAdditionalDiscountsApi(agencyId, priceListId || undefined);
+        if (res && Array.isArray(res.discounts)) {
+          setDiscounts(res.discounts);
+        } else {
           setDiscounts([]);
         }
-      } else {
+      } catch (e) {
+        console.error("할인 목록 조회 실패:", e);
         setDiscounts([]);
       }
     };
+    
     fetchDiscounts();
-  }, [priceListId, agencyId]);
+  }, [priceListId, agencyId, isInitialLoading]);
 
   const _plans = useMemo(() => {
     return phonePlans[telecom as keyof typeof phonePlans] || [];
@@ -202,80 +192,6 @@ const EditPriceModal = () => {
   const finalPrice = useMemo(() => {
     return fetchedOriginalPrice - fetchedCommonDiscount - discountNumber;
   }, [fetchedOriginalPrice, fetchedCommonDiscount, discountNumber]);
-
-  /**
-   * PriceList ID를 보장하는 공통 함수
-   */
-  const ensurePriceListId = async () => {
-    let currentId = priceListId;
-    if (currentId) return currentId;
-
-    // 1. 요금제 선택 확인 (없으면 첫 번째 자동 선택)
-    let targetPlan = selectedPlan;
-    if (!targetPlan) {
-      if (_plans.length > 0) {
-        targetPlan = _plans[0];
-        setSelectedPlan(targetPlan);
-        // map에서 미리 찾아보기
-        currentId = priceListMap[targetPlan.name] || null;
-      } else {
-        // 요금제가 아예 없는 경우는 드물지만 방어 코드 유지
-        return null;
-      }
-    }
-
-    if (currentId) {
-        setPriceListId(currentId);
-        return currentId;
-    }
-
-    // 2. ID가 없으면 서버에 생성 요청 (Enroll)
-    try {
-      const enrollRes = await enrollPriceListApi({
-        phoneBrand,
-        phoneName: device,
-        phonePlanName: targetPlan.name,
-        telecom,
-        subscriptionType: option!.type,
-        subsidyByAgency: discountNumber,
-        additionalDiscounts: [],
-      });
-
-      currentId = (enrollRes.priceListId || enrollRes.id) ?? null;
-
-      // 3. 생성 후에도 ID가 없으면 재조회 시도
-      if (!currentId) {
-        try {
-          const verifyRes = await getPriceListByPhoneApi({ phoneName: device });
-          const searchTelecom = telecom === "LG U+" ? "LG U" : telecom;
-          const verifySetting = verifyRes.priceList.find(
-            (p) => p.telecom === telecom || p.telecom === searchTelecom
-          );
-          const verifyOption = verifySetting?.options.find(
-            (opt) => opt.plan === targetPlan!.name && opt.type === option?.type
-          );
-          if (verifyOption?.priceListId) {
-            currentId = verifyOption.priceListId;
-          }
-        } catch (err) {
-          console.error("ID 재조회 실패", err);
-        }
-      }
-
-      if (currentId) {
-        setPriceListId(currentId);
-        setPriceListMap((prev) => ({ ...prev, [targetPlan!.name]: currentId! }));
-        return currentId;
-      } else {
-        alert("가격표 ID를 생성할 수 없습니다. (백엔드 응답 오류)");
-        return null;
-      }
-    } catch (e) {
-      console.error("가격표 생성 실패:", e);
-      alert("가격표 생성 중 오류가 발생했습니다.");
-      return null;
-    }
-  };
 
   const handleSubmit = async () => {
     if (!selectedPlan) return alert("요금제를 선택해주세요.");
@@ -327,22 +243,26 @@ const EditPriceModal = () => {
           <label className="text-sm font-bold text-gray-700">
             1. 요금제 선택
           </label>
-          <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto p-1 border rounded-lg bg-white">
-            {_plans.map((plan, index) => (
-              <button
-                key={plan.name}
-                onClick={() => setSelectedPlan(plan)}
-                className={cn(
-                  "p-2 border rounded-lg text-xs font-medium transition-colors",
-                  selectedPlan?.name === plan.name
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-gray-50 border-gray-200 hover:bg-gray-100",
-                )}
-              >
-                {plan.name}
-                {getPlanGroup(index) && ` (${getPlanGroup(index)})`}
-              </button>
-            ))}
+          <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto p-1 border rounded-lg bg-white relative">
+            {_plans.length === 0 ? (
+              <div className="col-span-2 py-4 text-center text-xs text-gray-400">조회 가능한 요금제가 없습니다.</div>
+            ) : (
+              _plans.map((plan, index) => (
+                <button
+                  key={plan.name}
+                  onClick={() => setSelectedPlan(plan)}
+                  className={cn(
+                    "p-2 border rounded-lg text-xs font-medium transition-colors",
+                    selectedPlan?.name === plan.name
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-gray-50 border-gray-200 hover:bg-gray-100",
+                  )}
+                >
+                  {plan.name}
+                  {getPlanGroup(index) && ` (${getPlanGroup(index)})`}
+                </button>
+              ))
+            )}
           </div>
         </div>
 
@@ -401,7 +321,7 @@ const EditPriceModal = () => {
                           
                           // 2. 추가 할인 API 호출
                           try {
-                            const res = await addAdditionalDiscountApi({
+                            await addAdditionalDiscountApi({
                               priceListId: priceListId || 0, // 0 또는 특정 의미있는 null 값 전달
                               name: discountFormName,
                               price: Number(discountFormPrice),
@@ -621,23 +541,22 @@ const EditPriceModal = () => {
               </div>
             </div>
 
-            {/* 버튼 구역 */}
-            <div className="flex gap-2">
-              <button
-                className="flex-1 p-3 bg-gray-100 text-gray-600 rounded-lg font-bold hover:bg-gray-200 transition-colors"
-                onClick={closeModal}
-              >
-                취소
-              </button>
-              <button
-                className="flex-1 p-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md transition-colors"
-                onClick={handleSubmit}
-              >
-                등록하기
-              </button>
-            </div>
-          </>
-        )}
+        <div className="flex gap-2">
+          <button
+            className="flex-1 p-3 bg-gray-100 text-gray-600 rounded-lg font-bold hover:bg-gray-200 transition-colors"
+            onClick={closeModal}
+          >
+            취소
+          </button>
+          <button
+            className="flex-1 p-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md transition-colors"
+            onClick={handleSubmit}
+          >
+            등록하기
+          </button>
+        </div>
+      </>
+    )}
       </div>
     </div>
   );
