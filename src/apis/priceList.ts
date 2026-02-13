@@ -116,12 +116,16 @@ export interface enrollPriceListRequest {
   telecom: string;
   subscriptionType: string;
   subsidyByAgency: number;
+  additionalDiscounts?: {
+    name: string;
+    price: number;
+  }[];
 }
 
 export interface enrollPriceListResponse {
   priceListId?: number; 
   id?: number;
-  // Other fields if any
+  success?: boolean;
 }
 
 // phone_brand 파라미터 제외
@@ -212,8 +216,8 @@ camelClient.interceptors.response.use(
 );
 
 export interface AdditionalDiscountItem {
-  "추가 할인 명": string;
-  "가격": number;
+  "할인명": string;
+  "할인가격": number;
   priceListId?: number;
   discountId?: number;
 }
@@ -246,7 +250,6 @@ export interface DeleteAdditionalDiscountRequest {
 }
 
 // Get all additional discounts for an agency
-// Get all additional discounts for an agency
 export const getAdditionalDiscountsApi = async (agencyId: number, priceListId?: number) => {
   const res = await camelClient.post<GetAdditionalDiscountsResponse>(
     `/user/getAdditionalDiscounts`,
@@ -255,6 +258,26 @@ export const getAdditionalDiscountsApi = async (agencyId: number, priceListId?: 
       priceListId: priceListId,
     },
   );
+
+  // 백엔드 응답 키값 매핑 (스크린샷 및 다양한 백엔드 버전 대응)
+  if (res.data && Array.isArray(res.data.discounts)) {
+    res.data.discounts = res.data.discounts.map((item: any) => {
+      // 1. 이름/가격 매핑
+      const mappedItem = {
+        ...item,
+        "할인명": item["할인명"] || item["추가 할인 명"] || item["name"] || "-",
+        "할인가격": item["할인가격"] || item["가격"] || item["price"] || 0,
+      };
+
+      // 2. ID 매핑 강화 (백엔드에서 올 수 있는 모든 가능성 체크)
+      // camelClient에서 keysToCamel을 쓰므로 snake_case는 이미 camelCase로 변환되어 있을 것임 (예: price_list_id -> priceListId)
+      mappedItem.discountId = item.discountId || item.id || item.discount_id;
+      mappedItem.priceListId = item.priceListId || item.price_list_id || item.priceList_id || priceListId;
+
+      return mappedItem;
+    });
+  }
+
   return res.data;
 };
 
